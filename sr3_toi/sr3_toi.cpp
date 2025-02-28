@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <Windows.h>
+#include <set>
 
 using namespace std;
 
@@ -47,14 +48,6 @@ struct Student {
 	}
 };
 
-struct Cell {
-	int RecNumID;//индексы в массиве эл-а, к-ый должен
-	int RecNumName;//находится на этом месте при той или иной сортировке
-	int RecNum;
-
-	Cell* next = nullptr;
-};
-
 #pragma region Global
 const int MAX_STUDENTS = 100;
 int studentsNumber = 10;
@@ -90,205 +83,185 @@ string normalize(const string& str) {
 }
 #pragma endregion
 
-#pragma region ID
-void sortByID(Cell* cell) {
-	if (cell == nullptr) return;
+struct Cell {
+	int ID;
+	string Name;
+	int recNum;
 
-	bool swapped;
-	do {
-		swapped = false;
-		Cell* current = cell;
-		while (current->next) {
-			if (students[current->RecNumID].id > 
-				students[current->next->RecNumID].id) {
-				int recnum = current->RecNumID;
-				current->RecNumID = current->next->RecNumID;
-				current->next->RecNumID = recnum;
-				swapped = true;
-			}
-			current = current->next;
-		}
-	} while (swapped);
+	Cell* next = nullptr;
+	Cell* nextID = nullptr;
+	Cell* nextName = nullptr;
+};
+Cell* head = nullptr;
+Cell* headID = nullptr;
+Cell* headName = nullptr;
+Cell* prevv = nullptr;
+
+#pragma region Print
+void printSortID(Cell* cell) {
+	if (!cell) return;
+	students[cell->recNum].print();
+	printSortID(cell->nextID);
 }
 
-void printByID(Cell* cell) {
-	Cell* current = cell;
-	while (current) {
-		if (current->RecNumID != -1)students[current->RecNumID].print();
-		current = current->next;
+void printSortName(Cell* cell) {
+	if (!cell) return;
+	students[cell->recNum].print();
+	printSortName(cell->nextName);
+}
+
+void print(Cell* cell) {
+	if (!cell) return;
+	students[cell->recNum].print();
+	print(cell->next);
+}
+#pragma endregion
+
+#pragma region Insert
+void insertMain(Cell* cur) {
+	if (prevv == nullptr) {//если первая ячейка
+		head = cur; //назначаем главной головой текущую созданную ячейку
+	}
+	else {
+		prevv->next = cur;//если не первая, то предыдущему назначаем следующим текущий
+
+	}
+	prevv = cur;
+}
+
+void insertID(Cell* cur) {
+	if (headID == nullptr) {//если голова ИД не назначена
+		headID = cur; //назначаем
+	}
+	else if (cur->ID < headID->ID) {//если голова есть и знач меньше, головы 
+		cur->nextID = headID;//то, переназначааем голову
+		headID = cur;
+	}
+	else {
+		Cell* temp = headID;//если же больше, то ищем место вставки
+		while (temp->nextID != nullptr && temp->nextID->ID < cur->ID) {//цикл пока не дойдем до конца или не найдем место
+			temp = temp->nextID;//просто идем по ячейкам
+		}//temp элемент перед местом вставки
+		cur->nextID = temp->nextID;//переназначаем ссылки
+		temp->nextID = cur;
 	}
 }
 
-int searchByID(int id, Cell* cell) {
-	if (students[cell->RecNum].id == id) return cell->RecNum;
-	else if (cell->next == nullptr) return -1;
-	else searchByID(id, cell->next);
-}
-
-void AddID(Cell* mainCell) {
-	int id = students[studentsNumber].id;
-
-	Cell* current = mainCell;
-	while (current != nullptr && students[current->RecNumID].id < id) {
-		if (current->next == nullptr) {
-			Cell* newCell = new Cell;
-			newCell->RecNumID = studentsNumber;
-			newCell->RecNumName = studentsNumber;
-			newCell->RecNum = studentsNumber;
-			current->next = newCell;
-			return;
-		}
-		current = current->next;
+void insertName(Cell* cur) {
+	if (headName == nullptr) {//если голова Фио не назначена
+		headName = cur; //назначаем
 	}
-	int rec1;
-	int rec = current->RecNumID;
-	current->RecNumID = studentsNumber;
-	current = current->next;
-	while (current != nullptr) {
-		rec1 = current->RecNumID;
-		current->RecNumID = rec;
-		rec = rec1;
-		if (current->next == nullptr) {
-			Cell* newCell = new Cell;
-			newCell->RecNum = studentsNumber;
-			newCell->RecNumName = studentsNumber;
-			newCell->RecNumID = rec;
-			current->next = newCell;
-			break;
-		}
-		current = current->next;
+	else if (normalize(cur->Name) > normalize(headName->Name)) {//если голова есть и знач меньше, головы 
+		cur->nextName = headName;//то, переназначааем голову
+		headName = cur;
+	}
+	else {
+		Cell* temp = headName;//если же больше, то ищем место вставки
+		while (temp->nextName != nullptr && normalize(temp->nextName->Name) > normalize(cur->Name)) {//цикл пока не дойдем до конца или не найдем место
+			temp = temp->nextName;//просто идем по ячейкам
+		}//temp элемент перед местом вставки
+		cur->nextName = temp->nextName;//переназначаем ссылки
+		temp->nextName = cur;
 	}
 }
 #pragma endregion
 
-#pragma region Name
-void sortByName(Cell* cell) {
-	if (cell == nullptr) return;
+#pragma region Delete
+void deleteID(int key) {
+	Cell* temp = headID;
+	while (temp->nextID != nullptr && temp->nextID->recNum != key) {//цикл пока не дойдем до конца или не найдем эл-т
+		temp = temp->nextID;//просто идем по ячейкам
+	}//temp элемент перед удаляемым эл-ом
+	temp->nextID = temp->nextID->nextID;
+}
 
-	bool swapped;
-	do {
-		swapped = false;
-		Cell* current = cell;
-		while (current->next) {
-			if (normalize(students[current->RecNumName].name) < 
-				normalize(students[current->next->RecNumName].name)) {
-				int recnum = current->RecNumName;
-				current->RecNumName = current->next->RecNumName;
-				current->next->RecNumName = recnum;
-				swapped = true;
-			}
-			current = current->next;
+void deleteName(int key) {
+	Cell* temp = headName;
+	while (temp->nextName != nullptr && temp->nextName->recNum != key) {//цикл пока не дойдем до конца или не найдем эл-т
+		temp = temp->nextName;//просто идем по ячейкам
+	}//temp элемент перед удаляемым эл-ом
+	temp->nextName = temp->nextName->nextName;
+}
+
+void deleteCell(int key) {
+	if (key == 0) {
+		head = head->next;
+	}
+	else {
+		Cell* temp = head;//ищем удал элемент
+		while (temp->next != nullptr && temp->next->recNum != key) {//цикл пока не дойдем до конца или не найдем эл-т
+			temp = temp->next;//просто идем по ячейкам
+		}//temp элемент перед удаляемым эл-ом
+		temp->next = temp->next->next;//переназначаем ссылки
+	}
+	deleteID(key);
+	deleteName(key);
+}
+#pragma endregion
+
+#pragma region Search
+int searchID(int id, Cell* cell) {
+	if (cell->ID == id) {
+		cout << "Студент найден: ";
+		students[cell->recNum].print();
+		return cell->recNum;
+	}
+	else if (cell->next) searchID(id, cell->next);
+	else {
+		cout << "Студент не наден(\n";
+		return -1;
+	}
+}
+
+int searchName(string name) {
+	Cell* cell = head;
+	while (cell) {
+		name = normalize(name);
+		if (normalize(cell->Name) == name) {
+			cout << "Студент найден: ";
+			students[cell->recNum].print();
+			return cell->recNum;
 		}
-	} while (swapped);
-
-	Cell* current = cell;
-	while (current && current->next) {
-		current = current->next;
+		cell = cell->next;
 	}
-	if (current) current->next = nullptr;
-}
-
-void printByName(Cell* cell) {
-	Cell* current = cell;
-	while (current) {
-		if (current->RecNumName != -1) students[current->RecNumName].print();
-		current = current->next;
-	}
-}
-
-int searchByName(string Name, Cell* cell) {
-	Cell* current = cell;
-	while (current != nullptr) {
-		if (normalize(students[current->RecNum].name) == Name) return current->RecNum;
-		current = current->next;
-	}
+	cout << "Студент не наден(\n";
 	return -1;
 }
-
-void AddName(Cell* mainCell) {
-	string Name = normalize(students[studentsNumber].name);
-
-	Cell* current = mainCell;
-	while (current != nullptr && normalize(students[current->RecNumName].name) > Name) {
-		current = current->next;
-	}
-	int rec1;
-	int rec = current->RecNumName;
-	current->RecNumName = studentsNumber;
-	current = current->next;
-	while (current != nullptr) {
-		rec1 = current->RecNumName;
-		current->RecNumName = rec;
-		rec = rec1;
-		current = current->next;
-	}
-}
 #pragma endregion
 
-Cell* Cover(int i) {
-	if (i < studentsNumber) {
-		Cell* cell = new Cell;
-		cell->RecNum = i;
-		cell->RecNumID = i;
-		cell->RecNumName = i;
-		cell->next = Cover(i + 1);
-		return cell;
-	}
-	else return nullptr;
-}
-
-void Print(Cell* cell) {
-	if (cell != nullptr) {
-		if (cell->RecNum != -1) students[cell->RecNum].print();
-		Print(cell->next);
-	}
-}
-
-void Delete(int key, Cell* cell) {
-	Cell* current = cell;
-	while (current) {
-		if (current->RecNum == key) current->RecNum = -1;
-		if (current->RecNumID == key) current->RecNumID = -1;
-		if (current->RecNumName == key) current->RecNumName = -1;
-		current = current->next;
-	}
-}
-
-void Add(Cell* mainCell) {
+void add() {
 	students[studentsNumber].input();
-	
-	AddID(mainCell);
-	AddName(mainCell);
-
+	Cell* cur = new Cell;//создаем новую ячейку заполняем ее
+	cur->ID = students[studentsNumber].id;
+	cur->Name = students[studentsNumber].name;
+	cur->recNum = studentsNumber;
+	insertMain(cur);
+	insertID(cur);
+	insertName(cur);
 	studentsNumber++;
-
 }
 
-int main()
-{
+int main() {
 	setlocale(LC_ALL, "Russian");
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
 
-	bool exit = false;
-	int choice = 0, subchoice = 0;
-	int id, key;
-	string Name;
-
-	//Ввод списка
-	cout << "Удалить исходные данные?\n1. Да\n2. Нет\nВведите команду: ";
-	cin >> choice;
-	if (choice == 1) {
-		cout << "Введите количество значений для добавления: ";
-		cin >> studentsNumber;
-		for (int i = 0; i < studentsNumber; i++) {
-			students[i].input();
-		}
+	//инициализация списка по исход данным
+	for (int i = 0; i < studentsNumber; i++) {
+		Cell* cur = new Cell;//создаем новую ячейку заполняем ее
+		cur->ID = students[i].id;
+		cur->Name = students[i].name;
+		cur->recNum = i;
+		insertMain(cur);
+		insertID(cur);
+		insertName(cur);
+		prevv = cur;//теперь предыдущая ячейка - это только что созданная
 	}
 
-	Cell* mainCell = Cover(0);
-	sortByID(mainCell);
-	sortByName(mainCell);
+	bool exit = false;
+	int choice = 0, subchoice;
+	int id, key;
+	string Name;
 
 	while (!exit) {
 		cout << "Главное меню:\n";
@@ -300,51 +273,37 @@ int main()
 
 		switch (choice) {
 		case 1:
-			Add(mainCell);
+			add();
 			break;
 		case 2:
-			Print(mainCell);
+			print(head);
 			break;
 		case 3:
-			cout << "1. Сортировать по возрастанию ID\n2. Сортировать по убыванию ФИО\nВведите команду: ";
-			cin >> subchoice;
-			if (subchoice == 1) {
-				printByID(mainCell);
-			}
-			else {
-				printByName(mainCell);
-			}
+			cout << "Сортировка по возрастанию ID\n";
+			printSortID(headID);
+			cout << "\nСортировка по убыванию ФИО\n";
+			printSortName(headName);
 			break;
 		case 4:
-			if (studentsNumber == 0) {
-				cout << "В списке нет студентов: ";
-				break;
-			}
 			cout << "Введите ID студента: ";
 			cin >> id;
-			key = searchByID(id, mainCell);
+			key = searchID(id, head);
 			if (key == -1) break;
-			students[key].print();
 			cout << "1. Удалить запись\n2. Назад\nВведите команду: ";
 			cin >> subchoice;
 			if (subchoice == 2) break;
-			Delete(key, mainCell);
+			deleteCell(key);
 			break;
 		case 5:
-			if (studentsNumber == 0) {
-				cout << "В списке нет студентов: ";
-				break;
-			}
 			cout << "Введите ФИО студента: ";
 			cin.ignore();
 			getline(cin, Name);
-			key = searchByName(normalize(Name), mainCell);
+			key = searchName(Name);
 			if (key == -1) break;
-			students[key].print();
 			cout << "1. Удалить запись\n2. Назад\nВведите команду: ";
 			cin >> subchoice;
 			if (subchoice == 2) break;
-			Delete(key, mainCell);
+			deleteCell(key);
 			break;
 		case 6:
 			exit = true;
